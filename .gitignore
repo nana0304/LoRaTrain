@@ -158,6 +158,8 @@ config.yml
 
 # Model files
 assets/models/
+assets/output/
+assets/logs/
 
 # Credentials and sensitive information
 *.env
