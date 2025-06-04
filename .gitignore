@@ -155,3 +155,29 @@ config.json
 runtime_store
 *.rest
 config.yml
+
+# Model files
+assets/models/
+
+# Credentials and sensitive information
+*.env
+*.pem
+*.key
+credentials.json
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log
+logs/
