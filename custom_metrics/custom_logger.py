@@ -1,8 +1,12 @@
+from sd_scripts.library import train_util
+
+
 class CustomLogger:
-    def __init__(self, accumulation):
+    def __init__(self, args):
         import wandb
         self.wandb = wandb
-        self.accumulation = accumulation
+        self.accumulation = args.gradient_accumulation_steps
+        self.args = args
         self.loss_sum = 0.0
         self.loss_count = 0
 
@@ -24,7 +28,26 @@ class CustomLogger:
             self.loss_sum = 0.0
             self.loss_count = 0
 
-    def log_named(self, name, value, global_step):
+    def log_named(self, name, value, global_step, accelerator):
+        # Ensure WandB tracker is initialized
+        if accelerator.get_tracker("wandb"):
+            self.wandb_tracker = accelerator.get_tracker("wandb")
+        elif self.wandb.run is None:
+            init_kwargs = {}
+            if self.args.wandb_run_name:
+                init_kwargs["wandb"] = {"name": self.args.wandb_run_name}
+            if self.args.log_tracker_config is not None:
+                import toml
+                init_kwargs = toml.load(self.args.log_tracker_config)
+
+            accelerator.init_trackers(
+                "network_train" if self.args.log_tracker_name is None else self.args.log_tracker_name,
+                config=train_util.get_sanitized_config_or_none(self.args),
+                init_kwargs=init_kwargs,
+            )
+        else:
+            raise RuntimeError("Failed to initialize WandB tracker.")
+
         effective_step = global_step * self.accumulation
         self.wandb.log({
             name: value,
