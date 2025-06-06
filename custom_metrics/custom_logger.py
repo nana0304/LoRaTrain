@@ -6,6 +6,8 @@ class CustomLogger:
         self.args = args
         self.loss_sum = 0.0
         self.loss_count = 0
+        self.moving_avg_loss = None  # Initialize moving average loss
+        self.alpha = 0.1  # Smoothing factor for moving average
 
     @property
     def accelerator(self):
@@ -41,6 +43,26 @@ class CustomLogger:
     def log(self, loss, global_step):
 
         self._initialize_tracker()
+        self.wandb.define_metric("loss/current_loss", step_metric="effective_step")
+
+        self.wandb.log({
+            "loss/current_loss": loss,
+            "effective_step": global_step * self.accumulation
+        }, step=global_step)
+
+        # Update moving average loss
+        if self.moving_avg_loss is None:
+            self.moving_avg_loss = loss  # Initialize on first step
+        else:
+            self.moving_avg_loss = self.alpha * loss + (1 - self.alpha) * self.moving_avg_loss
+
+        effective_step = global_step * self.accumulation
+        self.wandb.define_metric("loss/moving_average_loss", step_metric="effective_step")
+
+        self.wandb.log({
+            "loss/moving_average_loss": self.moving_avg_loss,
+            "effective_step": effective_step
+        }, step=global_step)
 
         self.loss_sum += loss
         self.loss_count += 1
@@ -48,11 +70,9 @@ class CustomLogger:
         if global_step % 5 == 0:
             raw_avg_loss = self.loss_sum / self.loss_count
             effective_step = global_step * self.accumulation
-            self.wandb.define_metric("loss/current_loss", step_metric="effective_step")
             self.wandb.define_metric("loss/raw_average_loss", step_metric="effective_step")
 
             self.wandb.log({
-                "loss/current_loss": loss,
                 "loss/raw_average_loss": raw_avg_loss,
                 "effective_step": effective_step
             }, step=global_step)
