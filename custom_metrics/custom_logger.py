@@ -48,13 +48,14 @@ class CustomLogger:
         if global_step % 5 == 0:
             raw_avg_loss = self.loss_sum / self.loss_count
             effective_step = global_step * self.accumulation
+            self.wandb.define_metric("loss/current_loss", step_metric="effective_step")
+            self.wandb.define_metric("loss/raw_average_loss", step_metric="effective_step")
 
             self.wandb.log({
-                "current_loss": loss,
-                "raw_average_loss": raw_avg_loss,
-                "global_step": global_step,
+                "loss/current_loss": loss,
+                "loss/raw_average_loss": raw_avg_loss,
                 "effective_step": effective_step
-            }, step=effective_step)
+            }, step=global_step)
 
             self.loss_sum = 0.0
             self.loss_count = 0
