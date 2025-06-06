@@ -6,7 +6,6 @@ class CustomLogger:
         self.args = args
         self.loss_sum = 0.0
         self.loss_count = 0
-        self.moving_avg_loss = None  # Initialize moving average loss
         self.alpha = 0.1  # Smoothing factor for moving average
         self.defined_metrics = set()
         self.named_moving_avg = {}  # Dictionary to store moving averages for named values
@@ -47,6 +46,14 @@ class CustomLogger:
             self.wandb.define_metric(name, step_metric=step_metric)
             self.defined_metrics.add(name)
 
+    def _calculate_moving_average(self, name, value):
+        """Calculate the moving average for a given name and value."""
+        if name not in self.named_moving_avg:
+            self.named_moving_avg[name] = value  # Initialize on first step
+        else:
+            self.named_moving_avg[name] = self.alpha * value + (1 - self.alpha) * self.named_moving_avg[name]
+        return self.named_moving_avg[name]
+
     def log(self, loss, global_step):
 
         self._initialize_tracker()
@@ -57,17 +64,13 @@ class CustomLogger:
             "effective_step": global_step * self.accumulation
         }, step=global_step)
 
-        # Update moving average loss
-        if self.moving_avg_loss is None:
-            self.moving_avg_loss = loss  # Initialize on first step
-        else:
-            self.moving_avg_loss = self.alpha * loss + (1 - self.alpha) * self.moving_avg_loss
+        moving_avg_loss = self._calculate_moving_average("loss", loss)
 
         effective_step = global_step * self.accumulation
         self._define_metric("loss/moving_average_loss", step_metric="effective_step")
 
         self.wandb.log({
-            "loss/moving_average_loss": self.moving_avg_loss,
+            "loss/moving_average_loss": moving_avg_loss,
             "effective_step": effective_step
         }, step=global_step)
 
@@ -90,18 +93,14 @@ class CustomLogger:
     def log_named(self, name, value, global_step):
 
         self._initialize_tracker()
-        # Update moving average for the named value
-        if name not in self.named_moving_avg:
-            self.named_moving_avg[name] = value  # Initialize on first step
-        else:
-            self.named_moving_avg[name] = self.alpha * value + (1 - self.alpha) * self.named_moving_avg[name]
+        moving_avg_value = self._calculate_moving_average(name, value)
 
         effective_step = global_step * self.accumulation
         self._define_metric(name, step_metric="effective_step")
 
         # Log the moving average value with global_step as the step
         self.wandb.log({
-            name: self.named_moving_avg[name],
+            name: moving_avg_value,
             "effective_step": effective_step
         }, step=global_step)
 
