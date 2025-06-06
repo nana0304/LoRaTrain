@@ -9,6 +9,8 @@ class CustomLogger:
         self.alpha = 0.1  # Smoothing factor for moving average
         self.defined_metrics = set()
         self.named_moving_avg = {}  # Dictionary to store moving averages for named values
+        self.loss_buffer = []
+        self.path_buffer = []
 
     @property
     def accelerator(self):
