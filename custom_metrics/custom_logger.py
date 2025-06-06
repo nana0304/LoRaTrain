@@ -9,6 +9,7 @@ class CustomLogger:
         self.moving_avg_loss = None  # Initialize moving average loss
         self.alpha = 0.1  # Smoothing factor for moving average
         self.defined_metrics = set()
+        self.named_moving_avg = {}  # Dictionary to store moving averages for named values
 
     @property
     def accelerator(self):
@@ -89,12 +90,18 @@ class CustomLogger:
     def log_named(self, name, value, global_step):
 
         self._initialize_tracker()
-        self._define_metric(name, step_metric="effective_step")
-        effective_step = global_step * self.accumulation
+        # Update moving average for the named value
+        if name not in self.named_moving_avg:
+            self.named_moving_avg[name] = value  # Initialize on first step
+        else:
+            self.named_moving_avg[name] = self.alpha * value + (1 - self.alpha) * self.named_moving_avg[name]
 
-        # Log the value with global_step as the step
+        effective_step = global_step * self.accumulation
+        self._define_metric(name, step_metric="effective_step")
+
+        # Log the moving average value with global_step as the step
         self.wandb.log({
-            name: value,
+            name: self.named_moving_avg[name],
             "effective_step": effective_step
         }, step=global_step)
 
