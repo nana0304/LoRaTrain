@@ -1,6 +1,3 @@
-from sd_scripts.library import train_util
-
-
 class CustomLogger:
     def __init__(self, args):
         import wandb
@@ -30,6 +27,9 @@ class CustomLogger:
                 import toml
                 init_kwargs = toml.load(self.args.log_tracker_config)
 
+            # Lazy import train_util to avoid circular import
+            from sd_scripts.library import train_util
+            
             self.accelerator.init_trackers(
                 "network_train" if self.args.log_tracker_name is None else self.args.log_tracker_name,
                 config=train_util.get_sanitized_config_or_none(self.args),
