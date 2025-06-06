@@ -45,7 +45,7 @@ class CustomLogger:
         self.loss_sum += loss
         self.loss_count += 1
 
-        if global_step % 10 == 0:
+        if global_step % 5 == 0:
             raw_avg_loss = self.loss_sum / self.loss_count
             effective_step = global_step * self.accumulation
 
