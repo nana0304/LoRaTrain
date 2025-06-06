@@ -10,7 +10,33 @@ class CustomLogger:
         self.loss_sum = 0.0
         self.loss_count = 0
 
+    def set_accelerator(self, accelerator):
+        self.accelerator = accelerator
+    
+    def _initialize_tracker(self):
+        # Ensure WandB tracker is initialized
+        if self.accelerator.get_tracker("wandb"):
+            self.wandb_tracker = self.accelerator.get_tracker("wandb")
+        elif self.wandb.run is None:
+            init_kwargs = {}
+            if self.args.wandb_run_name:
+                init_kwargs["wandb"] = {"name": self.args.wandb_run_name}
+            if self.args.log_tracker_config is not None:
+                import toml
+                init_kwargs = toml.load(self.args.log_tracker_config)
+
+            self.accelerator.init_trackers(
+                "network_train" if self.args.log_tracker_name is None else self.args.log_tracker_name,
+                config=train_util.get_sanitized_config_or_none(self.args),
+                init_kwargs=init_kwargs,
+            )
+        else:
+            raise RuntimeError("Failed to initialize WandB tracker.")
+
     def log(self, loss, global_step):
+
+        self._initialize_tracker()
+
         self.loss_sum += loss
         self.loss_count += 1
 
@@ -28,25 +54,9 @@ class CustomLogger:
             self.loss_sum = 0.0
             self.loss_count = 0
 
-    def log_named(self, name, value, global_step, accelerator):
-        # Ensure WandB tracker is initialized
-        if accelerator.get_tracker("wandb"):
-            self.wandb_tracker = accelerator.get_tracker("wandb")
-        elif self.wandb.run is None:
-            init_kwargs = {}
-            if self.args.wandb_run_name:
-                init_kwargs["wandb"] = {"name": self.args.wandb_run_name}
-            if self.args.log_tracker_config is not None:
-                import toml
-                init_kwargs = toml.load(self.args.log_tracker_config)
+    def log_named(self, name, value, global_step):
 
-            accelerator.init_trackers(
-                "network_train" if self.args.log_tracker_name is None else self.args.log_tracker_name,
-                config=train_util.get_sanitized_config_or_none(self.args),
-                init_kwargs=init_kwargs,
-            )
-        else:
-            raise RuntimeError("Failed to initialize WandB tracker.")
+        self._initialize_tracker()
 
         effective_step = global_step * self.accumulation
         self.wandb.log({
