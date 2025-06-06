@@ -10,8 +10,13 @@ class CustomLogger:
         self.loss_sum = 0.0
         self.loss_count = 0
 
-    def set_accelerator(self, accelerator):
-        self.accelerator = accelerator
+    @property
+    def accelerator(self):
+        return self._accelerator
+
+    @accelerator.setter
+    def accelerator(self, value):
+        self._accelerator = value
     
     def _initialize_tracker(self):
         # Ensure WandB tracker is initialized
