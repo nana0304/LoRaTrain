@@ -64,8 +64,12 @@ class CustomLogger:
         self._initialize_tracker()
 
         effective_step = global_step * self.accumulation
+
+        self.wandb.define_metric(name, step_metric="effective_step")
+
+        # Log the value with global_step as the step
         self.wandb.log({
             name: value,
-            f"{name}_global_step": global_step,
-            f"{name}_effective_step": effective_step
-        }, step=effective_step)
+            "effective step": effective_step
+        }, step=global_step)
+
